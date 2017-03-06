@@ -1,8 +1,9 @@
 import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Float, CheckConstraint
+from sqlalchemy import create_engine, Column, Integer, String, DateTime,\
+    Float, CheckConstraint, ForeignKey, PrimaryKeyConstraint
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.sql import func
 
 from config import DB_ENGINE
@@ -13,6 +14,36 @@ Base = declarative_base()
 
 # TODO: Use scoped_session
 Session = sessionmaker(bind=engine)
+
+
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(Integer(), primary_key=True, autoincrement=True)
+    user = Column(String(64))
+
+    def __init__(self, user):
+        self.user = user
+
+    def __str__(self):
+        return self.user
+
+
+class Comment(Base):
+    __tablename__ = 'comments'
+    __table_args__ = (PrimaryKeyConstraint('user', 'text', 'date', 'webm'),)
+    user = Column(Integer, ForeignKey('users.user'))
+    webm = Column(String(32), ForeignKey('WEBM.md5'))
+    text = Column(String(length=200))
+    date = Column(DateTime(), server_default=func.now())
+
+    def __init__(self, user, text, date, webm):
+        self. user = user
+        self.webm = webm
+        self.text = text
+        self.date = date
+
+    def __str__(self):
+        return "{}:{}".format(self.user, self.text[:20])
 
 
 class WEBM(Base):

@@ -16,6 +16,12 @@ def is_valid_2ch_url(url):
     return False
 
 
+def build_md5_user(ua, ip):
+    m = hashlib.md5()
+    m.update(''.join([ua, ip]).encode('utf-8'))
+    return m.hexdigest()[:32]
+
+
 def get_file_md5(file):
     h = hashlib.md5()
     file.seek(0)

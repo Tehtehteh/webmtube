@@ -3,9 +3,9 @@ import json
 import falcon
 import redis
 from falcon import status_codes
-
-from models import Session, WEBM
-from utils import is_valid_2ch_url
+import datetime
+from models import Session, WEBM, User, Comment
+from utils import is_valid_2ch_url, build_md5_user
 from tasks import analyse_video
 
 r = redis.StrictRedis(host='localhost', port=6379, db=1)
@@ -16,6 +16,37 @@ class JsonOnlyMiddleware:
         if request.method == 'POST' and 'application/json' not in request.content_type:
             raise falcon.HTTPUnsupportedMediaType('This API only supports requests encoded as JSON.')
 
+
+class LikesResource:
+    def on_get(self, request, response, webm_id):
+        pass
+
+    def on_post(self, request, response):
+        pass
+
+
+class CommentsResource:
+    def on_get(self, request, response, webm_id):
+        md5 = request.get_param('md5')
+        session = Session()
+        webm_redis = r.get(webm_id)
+        if not webm_redis:
+            comments = session.query(Comment).get(webm_id)
+            likes = session.query(WEBM).get(webm_id)
+
+    def on_post(self, request, response, webm_id=None):
+        user = build_md5_user(request.user_agent, request.host)
+        session = Session()
+        comment = request.get_param('comment')
+        webm_id = request.get_param('webm_id')
+        if session.query(User).get(user):
+            new_comment = Comment(user=user, text=comment, webm=webm_id, date=datetime.datetime.now())
+        else:
+            new_user = User(user=user)
+            session.add(new_user)
+            new_comment = Comment(user=user, text=comment, webm=webm_id, date=datetime.datetime.now())
+        session.add(new_comment)
+        session.commit()
 
 class ScreamerResource:
     """
@@ -61,7 +92,6 @@ class ScreamerResource:
                 response.body = json.dumps({"md5": md5,
                                             "message": "Неправильный запрос"})  # TODO: Make error handling with JSON(error attrbute)
 
-                # TODO Add CheckJSON middleware to allow only JSON reqs and resps
 
     def on_post(self, request, response):
         data = request.stream.read(request.content_length or 0).decode('utf-8')
